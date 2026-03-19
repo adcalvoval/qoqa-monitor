@@ -1,0 +1,41 @@
+name: QoQa Daily Check
+
+on:
+  schedule:
+    - cron: "30 7 * * *"   # 09:30 Swiss time (UTC+2 in summer)
+  workflow_dispatch:        # allows manual trigger from GitHub UI
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install Playwright browser
+        run: playwright install chromium --with-deps
+
+      - name: Write config
+        run: |
+          cat > config.json <<EOF
+          {
+            "keywords": ${{ vars.KEYWORDS }},
+            "email": {
+              "sender": "${{ secrets.EMAIL_SENDER }}",
+              "app_password": "${{ secrets.EMAIL_APP_PASSWORD }}",
+              "recipient": "${{ secrets.EMAIL_RECIPIENT }}"
+            },
+            "check_time": "09:30",
+            "qoqa_urls": ["https://www.qoqa.ch"]
+          }
+          EOF
+
+      - name: Run check
+        run: python main.py --now
