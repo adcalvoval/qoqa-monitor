@@ -1,0 +1,12 @@
+# Runtime / sensitive
+config.json
+seen_offers.json
+qoqa_monitor.log
+_debug_page.txt
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/

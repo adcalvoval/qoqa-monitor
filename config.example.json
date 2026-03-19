@@ -1,0 +1,12 @@
+{
+  "keywords": ["your-keyword", "another-keyword"],
+  "email": {
+    "sender": "your-gmail@gmail.com",
+    "app_password": "xxxx xxxx xxxx xxxx",
+    "recipient": "your-email@example.com"
+  },
+  "check_time": "09:30",
+  "qoqa_urls": [
+    "https://www.qoqa.ch"
+  ]
+}
