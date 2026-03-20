@@ -1,5 +1,6 @@
 import logging
 import re
+import unicodedata
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
@@ -17,7 +18,12 @@ def fetch_offers(urls: list[str]) -> list[dict]:
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
+        context = browser.new_context(
+            locale="fr-CH",
+            geolocation={"latitude": 46.8182, "longitude": 8.2275},
+            permissions=["geolocation"],
+        )
+        page = context.new_page()
 
         for url in urls:
             try:
@@ -39,6 +45,7 @@ def fetch_offers(urls: list[str]) -> list[dict]:
             except Exception as e:
                 logger.error(f"Failed to fetch {url}: {e}")
 
+        context.close()
         browser.close()
 
     # Deduplicate by offer URL
@@ -103,17 +110,22 @@ def parse_offers(html: str, source_url: str) -> list[dict]:
     return offers
 
 
+def _normalize(s: str) -> str:
+    """Lowercase and strip accents so 'hotel' matches 'Hôtel'."""
+    return unicodedata.normalize("NFD", s.lower()).encode("ascii", "ignore").decode()
+
+
 def find_matching_offers(offers: list[dict], keywords: list[str]) -> list[dict]:
     """
-    Return offers whose text contains at least one keyword (case-insensitive).
+    Return offers whose text contains at least one keyword (case- and accent-insensitive).
     Adds a 'matched_keywords' field to each returned offer.
     """
-    keywords_lower = [kw.lower() for kw in keywords]
+    keywords_norm = [_normalize(kw) for kw in keywords]
     matches = []
 
     for offer in offers:
-        text = offer["raw_text"].lower()
-        matched = [kw for kw in keywords_lower if kw in text]
+        text = _normalize(offer["raw_text"])
+        matched = [kw for kw in keywords_norm if kw in text]
         if matched:
             offer_copy = dict(offer)
             offer_copy["matched_keywords"] = matched
