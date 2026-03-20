@@ -23,8 +23,13 @@ def fetch_offers(urls: list[str]) -> list[dict]:
             try:
                 logger.info(f"Fetching (browser): {url}")
                 page.goto(url, wait_until="load", timeout=30000)
-                # Wait a bit for React to finish rendering offers
-                page.wait_for_timeout(3000)
+                # Wait for at least one offer card link to appear in the DOM
+                try:
+                    page.wait_for_selector(
+                        "a[href*='/offers/']", timeout=15000
+                    )
+                except PWTimeout:
+                    logger.warning(f"Offer cards did not appear within 15s at {url}")
                 html = page.content()
                 offers = parse_offers(html, url)
                 all_offers.extend(offers)
