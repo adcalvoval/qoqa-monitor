@@ -2,7 +2,7 @@ name: QoQa Daily Check
 
 on:
   schedule:
-    - cron: "30 7 * * *"   # 09:30 Swiss time (UTC+2 in summer)
+    - cron: "0 9 * * *"   # 10:00 Swiss time (UTC+2 in summer)
   workflow_dispatch:        # allows manual trigger from GitHub UI
 
 jobs:
