@@ -5,7 +5,7 @@
     "app_password": "xxxx xxxx xxxx xxxx",
     "recipient": "your-email@example.com"
   },
-  "check_time": "09:30",
+  "check_time": "10:00",
   "qoqa_urls": [
     "https://www.qoqa.ch"
   ]

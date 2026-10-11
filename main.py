@@ -3,7 +3,8 @@ QoQa Monitor — daily scraper for www.qoqa.ch
 Checks for keyword matches in offers and sends a Gmail notification.
 
 Usage:
-    python main.py              # runs the scheduler (checks daily at time set in config.json)
+    python main.py              # runs the scheduler (checks daily at 
+      set in config.json)
     python main.py --now        # run a single check immediately (useful for testing)
 """
 
@@ -85,46 +86,61 @@ def mark_as_seen(matches: list[dict], seen: dict) -> dict:
 
 def run_check() -> None:
     logger.info("=== Starting QoQa check ===")
-    config = load_config()
+    errors: list[str] = []
 
-    keywords: list[str] = config.get("keywords", [])
-    urls: list[str] = config.get("qoqa_urls", ["https://www.qoqa.ch"])
-    email_cfg: dict = config.get("email", {})
+    try:
+        config = load_config()
 
-    if not keywords:
-        logger.warning("No keywords configured in config.json — nothing to search for.")
-        return
+        keywords: list[str] = config.get("keywords", [])
+        urls: list[str] = config.get("qoqa_urls", ["https://www.qoqa.ch"])
+        email_cfg: dict = config.get("email", {})
 
-    logger.info(f"Keywords: {keywords}")
+        if not keywords:
+            logger.warning("No keywords configured in config.json — nothing to search for.")
+            logger.info("=== Check SUCCEEDED ===")
+            return
 
-    offers = fetch_offers(urls)
-    logger.info(f"Total unique offers fetched: {len(offers)}")
+        logger.info(f"Keywords: {keywords}")
 
-    matches = find_matching_offers(offers, keywords)
-    logger.info(f"Keyword matches found: {len(matches)}")
+        offers = fetch_offers(urls)
+        logger.info(f"Total unique offers fetched: {len(offers)}")
 
-    seen = load_seen()
-    new_matches = get_new_matches(matches, seen) if matches else []
+        matches = find_matching_offers(offers, keywords)
+        logger.info(f"Keyword matches found: {len(matches)}")
 
-    if matches and not new_matches:
-        logger.info("All matches already notified today — skipping email.")
-        return
+        seen = load_seen()
+        new_matches = get_new_matches(matches, seen) if matches else []
 
-    logger.info(f"New matches to notify: {len(new_matches)}")
+        if matches and not new_matches:
+            logger.info("All matches already notified today — skipping email.")
+            logger.info("=== Check SUCCEEDED ===")
+            return
 
-    sent = send_email(
-        sender=email_cfg.get("sender", ""),
-        app_password=email_cfg.get("app_password", ""),
-        recipient=email_cfg.get("recipient", ""),
-        matches=new_matches,
-    )
+        logger.info(f"New matches to notify: {len(new_matches)}")
 
-    if sent and new_matches:
-        seen = mark_as_seen(new_matches, seen)
-        save_seen(seen)
-        logger.info("Seen-offers file updated.")
+        sent = send_email(
+            sender=email_cfg.get("sender", ""),
+            app_password=email_cfg.get("app_password", ""),
+            recipient=email_cfg.get("recipient", ""),
+            matches=new_matches,
+        )
 
-    logger.info("=== Check complete ===")
+        if not sent:
+            errors.append("email notification failed")
+
+        if sent and new_matches:
+            seen = mark_as_seen(new_matches, seen)
+            save_seen(seen)
+            logger.info("Seen-offers file updated.")
+
+    except Exception as e:
+        errors.append(f"unexpected error: {e}")
+        logger.exception("Unexpected error during check")
+
+    if errors:
+        logger.error(f"=== Check FAILED: {'; '.join(errors)} ===")
+    else:
+        logger.info("=== Check SUCCEEDED ===")
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
@@ -143,7 +159,7 @@ def main() -> None:
         return
 
     config = load_config()
-    check_time: str = config.get("check_time", "08:00")
+    check_time: str = config.get("check_time", "10:00")
 
     logger.info(f"Scheduler started. Daily check at {check_time}.")
     logger.info("Press Ctrl+C to stop.")
