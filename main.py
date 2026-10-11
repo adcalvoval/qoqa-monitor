@@ -3,8 +3,7 @@ QoQa Monitor — daily scraper for www.qoqa.ch
 Checks for keyword matches in offers and sends a Gmail notification.
 
 Usage:
-    python main.py              # runs the scheduler (checks daily at 
-      set in config.json)
+    python main.py              # runs the scheduler (checks daily at time set in config.json)
     python main.py --now        # run a single check immediately (useful for testing)
 """
 
