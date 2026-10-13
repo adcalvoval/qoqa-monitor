@@ -92,12 +92,20 @@ def run_check() -> None:
 
         keywords: list[str] = config.get("keywords", [])
         urls: list[str] = config.get("qoqa_urls", ["https://www.qoqa.ch"])
-        email_cfg: dict = config.get("email", {})
+
+        # Get email credentials from environment variables
+        sender = os.getenv("QOQA_EMAIL_SENDER")
+        app_password = os.getenv("QOQA_EMAIL_PASSWORD")
+        recipient = os.getenv("QOQA_EMAIL_RECIPIENT")
 
         if not keywords:
             logger.warning("No keywords configured in config.json — nothing to search for.")
             logger.info("=== Check SUCCEEDED ===")
             return
+
+        if not sender or not app_password or not recipient:
+            logger.error("Missing email credentials. Set QOQA_EMAIL_SENDER, QOQA_EMAIL_PASSWORD, and QOQA_EMAIL_RECIPIENT environment variables.")
+            sys.exit(1)
 
         logger.info(f"Keywords: {keywords}")
 
@@ -118,9 +126,9 @@ def run_check() -> None:
         logger.info(f"New matches to notify: {len(new_matches)}")
 
         sent = send_email(
-            sender=email_cfg.get("sender", ""),
-            app_password=email_cfg.get("app_password", ""),
-            recipient=email_cfg.get("recipient", ""),
+            sender=sender,
+            app_password=app_password,
+            recipient=recipient,
             matches=new_matches,
         )
 

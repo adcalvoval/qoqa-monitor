@@ -3,6 +3,8 @@ config.json
 seen_offers.json
 qoqa_monitor.log
 _debug_page.txt
+.env
+.env.local
 
 # Python
 __pycache__/
