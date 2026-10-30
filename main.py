@@ -22,20 +22,28 @@ from scraper import fetch_offers, find_matching_offers
 from notifier import send_email
 
 # ── Logging setup ─────────────────────────────────────────────────────────────
+BASE_DIR = Path(__file__).parent
+LOG_PATH = BASE_DIR / "qoqa_monitor.log"
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s  %(levelname)-8s  %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler("qoqa_monitor.log", encoding="utf-8"),
+        logging.FileHandler(LOG_PATH, encoding="utf-8"),
     ],
 )
 logger = logging.getLogger(__name__)
 
-BASE_DIR = Path(__file__).parent
 CONFIG_PATH = BASE_DIR / "config.json"
 SEEN_PATH = BASE_DIR / "seen_offers.json"
+
+
+def _flush_logs() -> None:
+    """Flush all logging handlers to ensure logs are written to disk."""
+    for handler in logging.root.handlers:
+        handler.flush()
 
 
 # ── Config ────────────────────────────────────────────────────────────────────
@@ -101,6 +109,7 @@ def run_check() -> None:
         if not keywords:
             logger.warning("No keywords configured in config.json — nothing to search for.")
             logger.info("=== Check SUCCEEDED ===")
+            _flush_logs()
             return
 
         if not sender or not app_password or not recipient:
@@ -121,6 +130,7 @@ def run_check() -> None:
         if matches and not new_matches:
             logger.info("All matches already notified today — skipping email.")
             logger.info("=== Check SUCCEEDED ===")
+            _flush_logs()
             return
 
         logger.info(f"New matches to notify: {len(new_matches)}")
@@ -149,6 +159,8 @@ def run_check() -> None:
     else:
         logger.info("=== Check SUCCEEDED ===")
 
+    _flush_logs()
+
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
@@ -166,12 +178,15 @@ def main() -> None:
         return
 
     config = load_config()
-    check_time: str = config.get("check_time", "10:00")
+    check_times = config.get("check_times", config.get("check_time", "10:00"))
+    if isinstance(check_times, str):
+        check_times = [check_times]
 
-    logger.info(f"Scheduler started. Daily check at {check_time}.")
+    logger.info(f"Scheduler started. Daily checks at {', '.join(check_times)}.")
     logger.info("Press Ctrl+C to stop.")
 
-    schedule.every().day.at(check_time).do(run_check)
+    for check_time in check_times:
+        schedule.every().day.at(check_time).do(run_check)
 
     # Run once immediately on startup so you know it's working
     logger.info("Running initial check on startup...")
